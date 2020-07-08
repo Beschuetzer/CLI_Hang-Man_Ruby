@@ -7,8 +7,8 @@ class HangManGame
   @@section_width = 28
   @@valid_words = []
 
-  def initialize(chances_left, max_word_size)
-    @chances_left = chances_left
+  def initialize(max_chances, max_word_size)
+    @chances_left = max_chances
     @max_word_size = max_word_size    
     setup_variables()
     populate_valid_words()
@@ -17,7 +17,12 @@ class HangManGame
   def start()
     print_instructions()
     get_secret_word    
-    draw_grid
+    while @chances_left > 0 do
+      @grid = []
+      puts "While loop"
+      draw_grid
+      pick_letter
+    end
     #start playing
   end
 
@@ -29,7 +34,6 @@ class HangManGame
     }
     @letters_guessed_correctly = []
     @chances_left_left = @chances_left
-    @grid = []
     @grid_section_word = []
     @grid_section_letters = []
     @grid_section_hangman = []
@@ -81,7 +85,6 @@ class HangManGame
   def get_grid_section_letters()
     split_across_n_lines = 3
     chars_per_line = (@letters_available.length / split_across_n_lines) + 1
-    puts "chars_per_line: #{chars_per_line}"
 
     add_empty_line_to_grid_section(@grid_section_letters)
     @grid_section_letters << "LETTERS AVAILABLE:".center(@@section_width)
@@ -104,16 +107,6 @@ class HangManGame
 
   end
 
-  def combine_grids
-    @grid_section_word.each_index{|index|
-      new_line = @grid_section_word[index].to_s + @grid_section_letters[index].to_s + @grid_section_hangman[index].to_s 
-      #puts "@grid_section_word[index]: #{@grid_section_word[index]}, @grid_section_letters[index]: #{@grid_section_letters[index]}, @grid_section_hangman[index]: #{@grid_section_hangman[index]}, "
-      # puts "Index: #{index}"
-      # puts "new_line #{index}: #{new_line}"
-      @grid << new_line
-    }
-  end
-
   def draw_grid
     #gets all grid sections, combines, and displays
     get_grid_section_word
@@ -129,13 +122,40 @@ class HangManGame
     # puts @grid
   end
 
-  def play(player)
+  def combine_grids
+    @grid_section_word.each_index{|index|
+      new_line = @grid_section_word[index].to_s + @grid_section_letters[index].to_s + @grid_section_hangman[index].to_s 
+      #puts "@grid_section_word[index]: #{@grid_section_word[index]}, @grid_section_letters[index]: #{@grid_section_letters[index]}, @grid_section_hangman[index]: #{@grid_section_hangman[index]}, "
+      # puts "Index: #{index}"
+      # puts "new_line #{index}: #{new_line}"
+      @grid << new_line
+    }
+  end
+
+  def pick_letter()
     #get the letter, update choices,
-    raise "Player (#{player}) must be 1 or 2" if !player.between?(1,2)
+    begin
+      print "Pick an available letter: "
+
+      next_letter = gets.chomp.to_s
+    end while !next_letter.match(/[a-zA-Z]/) || !@letters_available.include?(next_letter)
+    #do stuff depending on whether letter is in secret word
+    if @secret_word.include?(next_letter)
+      @letters_available -= [next_letter]
+      indexes_of_letters_to_show = find_indexes_of_letter(next_letter)
+    else
+      @chances_left -= 1
+    end
   end
 
   def add_empty_line_to_grid_section(grid_section)
     grid_section << " " * @@section_width
+  end
+
+  def find_indexes_of_letter(next_letter)
+    indexes_of_letters_to_show = []
+
+    indexes_of_letters_to_show
   end
 
 end
