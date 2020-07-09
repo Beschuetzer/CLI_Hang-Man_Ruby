@@ -1,9 +1,8 @@
-
 require 'io/console'
+$guesses = 10
+$max_word_size = 12
 
 class HangManGame
-  @@chars_across = 50
-  @@lines_down = 10
   @@section_width = 28
   @@valid_words = []
 
@@ -22,14 +21,13 @@ class HangManGame
     while @chances_left > 0 do
       pick_letter
       draw_grid
-      puts "@secret_word_display_string: #{@secret_word_display_string}"
       if !@secret_word_display_string.include?('_')
         print "Great job!  '#{@secret_word}' is the word.  Play again? " 
         break
       end
-
     end
-    puts "You are out of guesses.  Play again? " if @chances_left <= 0
+
+    puts "'#{@secret_word}' was the word.  Play again? " if @chances_left <= 0
     ans = gets.chomp
     while !ans.match(/^\s*[yYnN]([eE][sS]|[oO])*\s*$/) do                                  
       print "Play again?  Available options are 'y' and 'n': "
@@ -39,12 +37,11 @@ class HangManGame
       setup_variables
       start
     end
-
-    #start playing
   end
 
   private
   def setup_variables()
+    @letters_guessed_incorrectly = []
     @letters_available = []
     "a".upto("z"){|char| 
       @letters_available << char
@@ -53,23 +50,22 @@ class HangManGame
     @chances_left = @max_chances
     @grid_section_word = []
     @grid_section_letters = []
+    @grid_section_guessed_incorrectly = []
     @grid_section_hangman = []
   end
 
   def populate_valid_words()
-    #makes sure the word is in the dictionary
     file = open("./words.txt").readlines
     file.each{|line|
       @@valid_words  << line.split()[0].to_s
     }
-    # puts "@@valid_words.length: #{@@valid_words.length}"
   end
 
   def print_instructions
     msg = "\nHang-Man Instructions:"
-    puts msg.ljust(@@chars_across)
+    puts msg
     puts "-" * (msg.length - 1)
-    puts "One person types in a word (only alpha characters are allowed a-z).  The other person tries to guess the word and has #{@chances_left} chances_left.".ljust(@@chars_across)
+    puts "One person types in a word (only alpha characters are allowed a-z).  The other person tries to guess the word within #{@chances_left} guesses.  Maximum word size is #{@max_word_size}.\n\n"
   end
 
   def get_secret_word()
@@ -77,23 +73,16 @@ class HangManGame
       print "Player 1, enter your secret word (only one word allowed): "
       @secret_word = STDIN.noecho(&:gets).chomp.strip
       puts "\n"
-      #puts "!@secret_word.split().length: #{@secret_word.split().length},  @secret_word.length: #{ @secret_word.length}, @max_word_size: #{@max_word_size}"
-      #puts "Word: #{@secret_word}, #{@secret_word} not in Dict: #{!@@valid_words.include?(@secret_word.to_s)}, Only one word: #{@secret_word.split().length != 1 }, Too long: #{ @secret_word.length > @max_word_size}, and Invalid Char: #{@secret_word.match(/^\s*[^A-Za-z]+\s*/)}"
-      # puts @@valid_words[rand(@@valid_words.length-1)]
-    end while @secret_word.split().length != 1 || @secret_word.length > @max_word_size || @secret_word.match(/^\s*[^A-Za-z]+\s*/) || !@@valid_words.include?(@secret_word.to_s)
-    #puts "Secret word: #{@secret_word} and length: #{@secret_word.length}"
+    end while @secret_word.split().length != 1 || @secret_word.length > @max_word_size || @secret_word.match(/^\s*[^A-Za-z]+\s*/) || !@@valid_words.any?{|word|word.downcase == @secret_word.to_s.downcase}
   end
 
   def get_grid_section_word()
-    #section 1: chances_left and secret word
     add_empty_line_to_grid_section(@grid_section_word)
-    @grid_section_word << "SECRET WORD".center(@@section_width-1)
+    @grid_section_word << "SECRET WORD:".center(@@section_width-1)
     @secret_word_display_string = "_ " * @secret_word.length
     if @letters_guessed_correctly.length != 0
       chars_in_secret_word = @secret_word.split('')
-      #puts "secret word split: #{chars_in_secret_word} and @letters_guessed_correctly #{@letters_guessed_correctly}"
       chars_in_secret_word.each_index {|index|
-        #puts "@secret_word_display_string[index*2+1]: #{@secret_word_display_string}[index*2+1] and chars_in_secret_word[index]: #{chars_in_secret_word[index]}"
         @secret_word_display_string[index*2] = chars_in_secret_word[index] if @letters_guessed_correctly.include?(chars_in_secret_word[index].downcase)
       }
     end
@@ -107,14 +96,13 @@ class HangManGame
     chars_per_line = (@letters_available.length / split_across_n_lines) + 1
 
     add_empty_line_to_grid_section(@grid_section_letters)
-    @grid_section_letters << "LETTERS AVAILABLE:".center(@@section_width)
+    @grid_section_letters << "  LETTERS AVAILABLE:".center(@@section_width)
     i = 1
     start_index = 0
     split_across_n_lines.times{
       end_index = chars_per_line * i - 1
       line = @letters_available[start_index..end_index].join(', ').center(@@section_width)
       @grid_section_letters << line
-      #puts "start_index: #{start_index}, end_index: #{end_index}, and line: #{line}"
       start_index = end_index + 1
       i += 1
     }
@@ -122,19 +110,86 @@ class HangManGame
 
   end
 
+  def get_grid_section_guessed_already()
+    split_across_n_lines = 3
+    chars_per_line = (@letters_available.length / split_across_n_lines) + 1
+
+    add_empty_line_to_grid_section(@grid_section_guessed_incorrectly)
+    @grid_section_guessed_incorrectly << "  GUESSED ALREADY:".center(@@section_width)
+
+    if @letters_guessed_incorrectly.length <= 6
+      line = @letters_guessed_incorrectly.sort.join(', ').center(@@section_width)
+      @grid_section_guessed_incorrectly << line
+      add_empty_line_to_grid_section(@grid_section_guessed_incorrectly)
+    elsif @letters_guessed_incorrectly.length.between?(6,12)
+      line = @letters_guessed_incorrectly[0..5].sort.join(', ').center(@@section_width)
+      @grid_section_guessed_incorrectly << line
+      line = @letters_guessed_incorrectly[6..11].sort.join(', ').center(@@section_width)
+      @grid_section_guessed_incorrectly << line
+    else
+      line = @letters_guessed_incorrectly[0..5].sort.join(', ').center(@@section_width)
+      @grid_section_guessed_incorrectly << line
+      line = @letters_guessed_incorrectly[6..11].sort.join(', ').center(@@section_width)
+      @grid_section_guessed_incorrectly << line
+      line = @letters_guessed_incorrectly[12..(@letters_guessed_incorrectly.length-1)].sort.join(', ').center(@@section_width)
+      @grid_section_guessed_incorrectly << line
+    end
+    add_empty_line_to_grid_section(@grid_section_guessed_incorrectly)
+  end
+
   def get_grid_section_hangman()
+    @grid_section_hangman << (" " * 10 + "_" * 9).center(@@section_width)
+    @grid_section_hangman << (" " * 12 + "|" + " " * 9 + "|").center(@@section_width)
+    @grid_section_hangman << (" " * 10 + "O" + " " * 9 + "|").center(@@section_width)
+    line3 = ""
+    substr = ""
+    base = "____|____"
+    case @chances_left
+    when 5
+      substr = "|"
+      line2 = (" " * (10-(5-@chances_left)) + substr + " " * 9 + "|").center(@@section_width)
+    when 4
+      substr = "/|"
+      line2 = (" " * (10-(5-@chances_left)) + substr + " " * 9 + "|").center(@@section_width)
+    when 3
+    when 2
+      substr = "|"
+      line3 = (" " * (16-(5-@chances_left)) + substr + " " * 5 + base).center(@@section_width)
+    when 1
+      substr = "_| "
+      line3 = (" " * (16-(5-@chances_left)) + substr + " " * 4 + base).center(@@section_width)
+    when 0
+      substr = "_|_"
+      line3 = (" " * (17-(5-@chances_left)) + substr + " " * 4 + base).center(@@section_width)
+    else
+      substr = "|"
+      line2 = (" " * (10) + substr + " " * 9 + "|").center(@@section_width)
+    end
+
+    if @chances_left.between?(3,@max_chances)
+      line3 = " " * 10 + "____|____".center(@@section_width)
+    end
+
+    if @chances_left.between?(0,3)
+      substr = "/|\\"
+      line2 = (" " * 9 + substr + " " * 8 + "|").center(@@section_width)
+    end
+
+    @grid_section_hangman << line2
+    @grid_section_hangman << line3
 
   end
 
   def draw_grid
-    #gets all grid sections, combines, and displays
     @grid_section_word = []
     @grid_section_letters = []
+    @grid_section_guessed_incorrectly = []
     @grid_section_hangman = []
     @grid = []
 
     get_grid_section_word
     get_grid_section_letters
+    get_grid_section_guessed_already
     get_grid_section_hangman
     combine_grids()
 
@@ -142,34 +197,29 @@ class HangManGame
       puts line
     }
     puts ""
-    # line = " " * @@chars_across
-    # @@lines_down.times {@grid << line}
-    # puts @grid
   end
 
   def combine_grids
     @grid_section_word.each_index{|index|
-      new_line = @grid_section_word[index].to_s + @grid_section_letters[index].to_s + @grid_section_hangman[index].to_s 
-      #puts "@grid_section_word[index]: #{@grid_section_word[index]}, @grid_section_letters[index]: #{@grid_section_letters[index]}, @grid_section_hangman[index]: #{@grid_section_hangman[index]}, "
-      # puts "Index: #{index}"
-      # puts "new_line #{index}: #{new_line}"
+      new_line = @grid_section_word[index].to_s + @grid_section_letters[index].to_s + @grid_section_guessed_incorrectly[index].to_s  + @grid_section_hangman[index].to_s 
       @grid << new_line
     }
   end
 
   def pick_letter()
-    #get the letter, update choices,
     begin
       print "Pick an available letter: "
-
       next_letter = gets.chomp.to_s
-    end while !next_letter.match(/[a-zA-Z]/) || !@letters_available.include?(next_letter)
-    #do stuff depending on whether letter is in secret word
-    @letters_available -= [next_letter]
-    if @secret_word.include?(next_letter)
-      @letters_guessed_correctly += [next_letter]
-      indexes_of_letters_to_show = find_indexes_of_letter(next_letter)
-      #puts "next_letter: #{next_letter} and @letters_available: #{@letters_available}, and @letters_guessed_correctly: #{@letters_guessed_correctly}"
+    end while !next_letter.match(/[a-zA-Z]/) || !@letters_available.any?{|letter| letter.downcase == next_letter.downcase}
+
+    next_letter_as_array = [next_letter.downcase]
+    @letters_available -= next_letter_as_array
+    @letters_guessed_incorrectly += next_letter_as_array
+    puts @secret_word.split('').any?{|char|
+      char.downcase == next_letter.downcase
+    }
+    if @secret_word.split('').any?{|char| char.downcase == next_letter.downcase}
+      @letters_guessed_correctly += next_letter_as_array
     else
       @chances_left -= 1
     end
@@ -178,28 +228,7 @@ class HangManGame
   def add_empty_line_to_grid_section(grid_section)
     grid_section << " " * @@section_width
   end
-
-  def find_indexes_of_letter(next_letter)
-    indexes_of_letters_to_show = []
-
-    indexes_of_letters_to_show
-  end
-
 end
 
-hang_man_game = HangManGame.new(5, 10)
+hang_man_game = HangManGame.new($guesses, $max_word_size)
 hang_man_game.start()
-
-
-# dict = open("./dict.txt").readlines
-# i = 0
-# dict.each{|l|
-#   words = l.split()
-#   if i <= 10000 && l.match(/[a-zA-Z]*/)
-
-#     puts words[0]
-#   else
-#     break
-#   end
-#   i+=1
-# }
