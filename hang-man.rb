@@ -24,7 +24,7 @@ class HangManGame
       draw_grid
       puts "@secret_word_display_string: #{@secret_word_display_string}"
       if !@secret_word_display_string.include?('_')
-        puts "Great job!  '#{@secret_word}'' is the word.  Play again? " 
+        print "Great job!  '#{@secret_word}' is the word.  Play again? " 
         break
       end
 
@@ -141,6 +141,7 @@ class HangManGame
     @grid.each{|line|
       puts line
     }
+    puts ""
     # line = " " * @@chars_across
     # @@lines_down.times {@grid << line}
     # puts @grid
