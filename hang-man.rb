@@ -289,10 +289,10 @@ class HangManGame
   end
 
 end
+
 saved_game = nil
 hang_man_game = HangManGame.new()
 saved_game = hang_man_game.start()
-puts saved_game
 if !saved_game.nil?
   puts "Starting save..." 
   saved_game.play_game
