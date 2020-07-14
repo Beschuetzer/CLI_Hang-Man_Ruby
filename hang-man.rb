@@ -14,8 +14,14 @@ class HangManGame
   def start()
     print_instructions()
     get_play_options()
+    return @saved_game if @load_game == 'y'
+    play_game    
+  end
+
+  def play_game
     draw_grid
     while @chances_left > 0 do
+      save
       pick_letter
       draw_grid
       if !@secret_word_display_string.include?('_')
@@ -24,6 +30,7 @@ class HangManGame
       end
     end
 
+    File.delete(@save_file) if File.exist?(@save_file)
     print "\n'#{@secret_word}' was the word.  Play again? " if @chances_left <= 0
     ans = gets.chomp
     while !ans.match(/^\s*[yYnN]([eE][sS]|[oO])*\s*$/) do                                  
@@ -37,15 +44,34 @@ class HangManGame
   end
 
   private
+  def save
+    File.open(@save_file, 'w') {|file| file.write(Marshal.dump(self))} 
+  end
+
+  def load_save
+    @saved_game = nil
+    File.open(@save_file, 'r') {|file| @saved_game = Marshal.load(file.read)} 
+  end
+
   def get_play_options
-    play_against_computer = yes_no_prompt("Would you like to play against the Computer?")
-    if play_against_computer == 'y'
-      @secret_word = get_random_word_from_valid_words
-    else
-      get_secret_word    
+    @save_file = "./save.dat"
+    @load_game = 'n'
+    if File.exist?(@save_file)
+      @load_game = yes_no_prompt("Looks like you have a saved game.  Would you like to load it?")
     end
 
-    @chances_left = min_max_prompt(1, $max_guesses, "How many guesses?")
+    if @load_game == 'y'
+      load_save
+    else
+      play_against_computer = yes_no_prompt("Would you like to play against the Computer?")
+      if play_against_computer == 'y'
+        @secret_word = get_random_word_from_valid_words
+      else
+        get_secret_word    
+      end
+
+      @chances_left = min_max_prompt(1, $max_guesses, "How many guesses?")
+    end
   end
 
   def setup_variables()
@@ -263,6 +289,12 @@ class HangManGame
   end
 
 end
-
+saved_game = nil
 hang_man_game = HangManGame.new()
-hang_man_game.start()
+saved_game = hang_man_game.start()
+puts saved_game
+if !saved_game.nil?
+  puts "Starting save..." 
+  saved_game.play_game
+end
+  
