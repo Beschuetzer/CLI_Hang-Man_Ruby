@@ -1,6 +1,7 @@
 require 'io/console'
 $max_guesses = 10
 $max_word_size = 12
+$save_file = "./save.dat"
 
 class HangManGame
   @@section_width = 28
@@ -14,7 +15,6 @@ class HangManGame
   def start()
     print_instructions()
     get_play_options()
-    return @saved_game if @load_game == 'y'
     play_game    
   end
 
@@ -30,7 +30,7 @@ class HangManGame
       end
     end
 
-    File.delete(@save_file) if File.exist?(@save_file)
+    File.delete($save_file) if File.exist?($save_file)
     print "\n'#{@secret_word}' was the word.  Play again? " if @chances_left <= 0
     ans = gets.chomp
     while !ans.match(/^\s*[yYnN]([eE][sS]|[oO])*\s*$/) do                                  
@@ -45,33 +45,18 @@ class HangManGame
 
   private
   def save
-    File.open(@save_file, 'w') {|file| file.write(Marshal.dump(self))} 
-  end
-
-  def load_save
-    @saved_game = nil
-    File.open(@save_file, 'r') {|file| @saved_game = Marshal.load(file.read)} 
+    File.open($save_file, 'w') {|file| file.write(Marshal.dump(self))} 
   end
 
   def get_play_options
-    @save_file = "./save.dat"
-    @load_game = 'n'
-    if File.exist?(@save_file)
-      @load_game = yes_no_prompt("Looks like you have a saved game.  Would you like to load it?")
-    end
-
-    if @load_game == 'y'
-      load_save
+    play_against_computer = HangManGame.yes_no_prompt("Would you like to play against the Computer?")
+    if play_against_computer == 'y'
+      @secret_word = get_random_word_from_valid_words
     else
-      play_against_computer = yes_no_prompt("Would you like to play against the Computer?")
-      if play_against_computer == 'y'
-        @secret_word = get_random_word_from_valid_words
-      else
-        get_secret_word    
-      end
-
-      @chances_left = min_max_prompt(1, $max_guesses, "How many guesses?")
+      get_secret_word    
     end
+
+    @chances_left = HangManGame.min_max_prompt(1, $max_guesses, "How many guesses?")
   end
 
   def setup_variables()
@@ -270,7 +255,7 @@ class HangManGame
     grid_section << " " * @@section_width
   end
 
-  def yes_no_prompt(msg)
+  def self.yes_no_prompt(msg)
     ans = ""
     while !ans.match(/^\s*[yYnN]([eE][sS]|[oO])*\s*$/) do
       print msg + "  Available options are 'y' and 'n': "
@@ -279,7 +264,7 @@ class HangManGame
     ans
   end
 
-  def min_max_prompt(min, max, msg)
+  def self.min_max_prompt(min, max, msg)
     response = 0
     while !response.to_i.between?(min,max) do
       print msg + " (#{min} - #{max}): "
@@ -290,11 +275,20 @@ class HangManGame
 
 end
 
-saved_game = nil
-hang_man_game = HangManGame.new()
-saved_game = hang_man_game.start()
-if !saved_game.nil?
-  puts "Starting save..." 
-  saved_game.play_game
+#handling load game here instead of in class
+load_game = 'n'
+if File.exist?($save_file)
+  load_game = HangManGame.yes_no_prompt("Looks like you have a saved game.  Would you like to load it?")
+
+  if load_game == 'y'
+    saved_game = nil
+    File.open($save_file, 'r') {|file| saved_game = Marshal.load(file.read)} 
+    puts "Starting save..." 
+    saved_game.play_game
+  else
+    hang_man_game = HangManGame.new()
+    hang_man_game.start()
+  end
 end
+
   
