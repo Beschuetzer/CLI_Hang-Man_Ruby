@@ -1,4 +1,4 @@
 Secret Word:   Guesses: 4       Choices Left            
 s p _ _ _ _ l       O         a,b,c,d,e,f,g,h         
                    /|\         i,j,k,l,m,n,o,p          
-                   _|_         q,r,s,t,u,v,w,x,y,z  
+                    /\         q,r,s,t,u,v,w,x,y,z  

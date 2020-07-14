@@ -1,5 +1,5 @@
 require 'io/console'
-$guesses = 10
+$guesses = 8
 $max_word_size = 12
 
 class HangManGame
@@ -16,7 +16,7 @@ class HangManGame
 
   def start()
     print_instructions()
-    get_secret_word    
+    get_play_style()
     draw_grid
     while @chances_left > 0 do
       pick_letter
@@ -40,6 +40,15 @@ class HangManGame
   end
 
   private
+  def get_play_style
+    play_against_computer = yes_no_prompt("Would you like to play against the Computer?")
+    if play_against_computer == 'y'
+      @secret_word = get_random_word_from_valid_words
+    else
+      get_secret_word    
+    end
+  end
+
   def setup_variables()
     @letters_guessed_incorrectly = []
     @letters_available = []
@@ -59,6 +68,14 @@ class HangManGame
     file.each{|line|
       @@valid_words  << line.split()[0].to_s
     }
+  end
+
+  def get_random_word_from_valid_words
+    word = ""
+    while !word.length.between?(5,@max_word_size)
+      word = @@valid_words.sample()
+    end
+    word
   end
 
   def print_instructions
@@ -116,22 +133,22 @@ class HangManGame
 
     add_empty_line_to_grid_section(@grid_section_guessed_incorrectly)
     @grid_section_guessed_incorrectly << "  GUESSED ALREADY:".center(@@section_width)
-
+    @letters_guessed_incorrectly.sort!
     if @letters_guessed_incorrectly.length <= 6
-      line = @letters_guessed_incorrectly.sort.join(', ').center(@@section_width)
+      line = @letters_guessed_incorrectly.join(', ').center(@@section_width)
       @grid_section_guessed_incorrectly << line
       add_empty_line_to_grid_section(@grid_section_guessed_incorrectly)
     elsif @letters_guessed_incorrectly.length.between?(6,12)
-      line = @letters_guessed_incorrectly[0..5].sort.join(', ').center(@@section_width)
+      line = @letters_guessed_incorrectly[0..5].join(', ').center(@@section_width)
       @grid_section_guessed_incorrectly << line
-      line = @letters_guessed_incorrectly[6..11].sort.join(', ').center(@@section_width)
+      line = @letters_guessed_incorrectly[6..11].join(', ').center(@@section_width)
       @grid_section_guessed_incorrectly << line
     else
-      line = @letters_guessed_incorrectly[0..5].sort.join(', ').center(@@section_width)
+      line = @letters_guessed_incorrectly[0..5].join(', ').center(@@section_width)
       @grid_section_guessed_incorrectly << line
-      line = @letters_guessed_incorrectly[6..11].sort.join(', ').center(@@section_width)
+      line = @letters_guessed_incorrectly[6..11].join(', ').center(@@section_width)
       @grid_section_guessed_incorrectly << line
-      line = @letters_guessed_incorrectly[12..(@letters_guessed_incorrectly.length-1)].sort.join(', ').center(@@section_width)
+      line = @letters_guessed_incorrectly[12..(@letters_guessed_incorrectly.length-1)].join(', ').center(@@section_width)
       @grid_section_guessed_incorrectly << line
     end
     add_empty_line_to_grid_section(@grid_section_guessed_incorrectly)
@@ -228,6 +245,16 @@ class HangManGame
   def add_empty_line_to_grid_section(grid_section)
     grid_section << " " * @@section_width
   end
+
+  def yes_no_prompt(msg)
+    ans = ""
+    while !ans.match(/^\s*[yYnN]([eE][sS]|[oO])*\s*$/) do
+      print msg + "  Available options are 'y' and 'n': "
+      ans = gets.chomp.downcase
+    end
+    ans
+  end
+
 end
 
 hang_man_game = HangManGame.new($guesses, $max_word_size)
