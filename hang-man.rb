@@ -1,22 +1,19 @@
 require 'io/console'
-$guesses = 8
+$max_guesses = 10
 $max_word_size = 12
 
 class HangManGame
   @@section_width = 28
   @@valid_words = []
 
-  def initialize(max_chances, max_word_size)
-    @max_chances = max_chances
-    @chances_left = @max_chances
-    @max_word_size = max_word_size    
+  def initialize()
     setup_variables()
     populate_valid_words()
   end
 
   def start()
     print_instructions()
-    get_play_style()
+    get_play_options()
     draw_grid
     while @chances_left > 0 do
       pick_letter
@@ -27,7 +24,7 @@ class HangManGame
       end
     end
 
-    puts "'#{@secret_word}' was the word.  Play again? " if @chances_left <= 0
+    print "\n'#{@secret_word}' was the word.  Play again? " if @chances_left <= 0
     ans = gets.chomp
     while !ans.match(/^\s*[yYnN]([eE][sS]|[oO])*\s*$/) do                                  
       print "Play again?  Available options are 'y' and 'n': "
@@ -40,13 +37,15 @@ class HangManGame
   end
 
   private
-  def get_play_style
+  def get_play_options
     play_against_computer = yes_no_prompt("Would you like to play against the Computer?")
     if play_against_computer == 'y'
       @secret_word = get_random_word_from_valid_words
     else
       get_secret_word    
     end
+
+    @chances_left = min_max_prompt(1, $max_guesses, "How many guesses?")
   end
 
   def setup_variables()
@@ -56,7 +55,6 @@ class HangManGame
       @letters_available << char
     }
     @letters_guessed_correctly = []
-    @chances_left = @max_chances
     @grid_section_word = []
     @grid_section_letters = []
     @grid_section_guessed_incorrectly = []
@@ -72,7 +70,7 @@ class HangManGame
 
   def get_random_word_from_valid_words
     word = ""
-    while !word.length.between?(5,@max_word_size)
+    while !word.length.between?(5,$max_word_size)
       word = @@valid_words.sample()
     end
     word
@@ -82,7 +80,7 @@ class HangManGame
     msg = "\nHang-Man Instructions:"
     puts msg
     puts "-" * (msg.length - 1)
-    puts "One person types in a word (only alpha characters are allowed a-z).  The other person tries to guess the word within #{@chances_left} guesses.  Maximum word size is #{@max_word_size}.\n\n"
+    puts "One person types in a word (only alpha characters are allowed a-z).  The other person tries to guess the word within a certain number of guesses.  Maximum word size is #{$max_word_size}.\n\n"
   end
 
   def get_secret_word()
@@ -90,7 +88,7 @@ class HangManGame
       print "Player 1, enter your secret word (only one word allowed): "
       @secret_word = STDIN.noecho(&:gets).chomp.strip
       puts "\n"
-    end while @secret_word.split().length != 1 || @secret_word.length > @max_word_size || @secret_word.match(/^\s*[^A-Za-z]+\s*/) || !@@valid_words.any?{|word|word.downcase == @secret_word.to_s.downcase}
+    end while @secret_word.split().length != 1 || @secret_word.length > $max_word_size || @secret_word.match(/^\s*[^A-Za-z]+\s*/) || !@@valid_words.any?{|word|word.downcase == @secret_word.to_s.downcase}
   end
 
   def get_grid_section_word()
@@ -183,7 +181,7 @@ class HangManGame
       line2 = (" " * (10) + substr + " " * 9 + "|").center(@@section_width)
     end
 
-    if @chances_left.between?(3,@max_chances)
+    if @chances_left.between?(3,$max_guesses)
       line3 = " " * 10 + "____|____".center(@@section_width)
     end
 
@@ -255,7 +253,16 @@ class HangManGame
     ans
   end
 
+  def min_max_prompt(min, max, msg)
+    response = 0
+    while !response.to_i.between?(min,max) do
+      print msg + " (#{min} - #{max}): "
+      response = gets.chomp.downcase
+    end
+    response.to_i
+  end
+
 end
 
-hang_man_game = HangManGame.new($guesses, $max_word_size)
+hang_man_game = HangManGame.new()
 hang_man_game.start()
